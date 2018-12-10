@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[20]:
+# In[1]:
 
 
 import numpy as np
@@ -36,7 +36,7 @@ def makeFingerPrint(samp_list):
     return f
 
 
-# In[16]:
+# In[3]:
 
 
 #FOR UNSEEN
@@ -121,7 +121,7 @@ def rescale_cond(A, Aeq, xLP, szLPx):
     return A, Aeq
 
 
-# In[17]:
+# In[4]:
 
 
 def unseen(f, gridFactor = 1.05):
@@ -251,7 +251,7 @@ def unseen(f, gridFactor = 1.05):
     return histx, x
 
 
-# In[18]:
+# In[5]:
 
 
 def entropy_estC(f, gridFactor = 1.05):
@@ -433,18 +433,29 @@ def entropy_estC(f, gridFactor = 1.05):
     return ent
 
 
+# In[57]:
+
+
+get_ipython().run_cell_magic(u'time', u'', u'\ndef naiveEstimator(f):\n    empiricalEntropy = 0\n    for i in range (0, len(f)):\n        empiricalEntropy -= f[i] * (i + 1) / k * math.log((i + 1) / k, 2)\n    return empiricalEntropy\n\nplot_data = {}\ngridFactor = 1.1\nfor k in [1000, 10000]:\n    n_list = [k/10,2 * k/10,3 * k/10, 4*k/10, 5*k/10, 6*k/10, k, 2*k, 3*k, 4*k, 5*k, 6*k, 7*k, 8*k, 9*k, 10*k]\n    \n    rmse = []\n    n_rmse = []\n    mm_rmse = []\n    kn_rmse = []\n    for n in n_list:\n\n        t_ent = []\n        pred = []\n        n_pred = []\n        mm_pred = []\n        kn_pred = []\n        for z in range(0, 10):\n            \n            sample = []\n            for x in range(0, int(k)):\n                sample.append(int(random.randint(1, n)))\n            f = makeFingerPrint(sample)\n            h, x = unseen(f)\n            trueEntropy = math.log(n)\n            sum_f = 0\n            for i in range (0, len(f)):\n                sum_f = sum_f + f[i]\n                \n            empiricalEntropy = naiveEstimator(f)\n            #miller_madow\n            millerMadow_entropy = empiricalEntropy - (sum_f - 1) / 2 / k\n            \n            sumHnaiveF = 0\n            for j in range(0, len(f)):\n                temp = f.pop(j)\n                sumHnaiveF += naiveEstimator(f)\n                f.insert(j, temp)\n            knifed = len(f) * empiricalEntropy - (k-1)/k * sumHnaiveF * gridFactor\n            \n            estimatedEntropy = 0\n            if x is not None:\n                for i in range(0, len(x)):\n                    estimatedEntropy -= h[i] * x[i] * math.log(x[i])\n\n            e2 = entropy_estC(f)\n            \n            t_ent.append(trueEntropy)\n            pred.append(e2)\n            n_pred.append(empiricalEntropy)\n            mm_pred.append(millerMadow_entropy)\n            kn_pred.append(knifed)\n            \n        rmse.append(mean_absolute_error(t_ent, pred))\n        n_rmse.append(mean_absolute_error(t_ent, n_pred))\n        mm_rmse.append(mean_absolute_error(t_ent, mm_pred))\n        kn_rmse.append(mean_absolute_error(t_ent, kn_pred))\n        print("===>", k, n)\n    plot_data[k] = {\'n_list\': n_list, \'rmse\': rmse, \'n_rmse\' : n_rmse, \'mm_rmse\' : mm_rmse, \'kn_rmse\' : kn_rmse}')
+
+
+# In[58]:
+
+
 for k in plot_data.keys():
     n_list = plot_data[k]['n_list']
     rmse = plot_data[k]['rmse']
     n_rmse = plot_data[k]['n_rmse']
-    jk_rmse = plot_data[k]['jk_rmse']
+    mm_rmse = plot_data[k]['mm_rmse']
     plt.style.use('seaborn-darkgrid')
     plt.title("k = " + str(k))
     plt.plot( n_list, rmse, marker='o', color='green', linewidth=2, label='Unseen')
     plt.plot( n_list, n_rmse, marker='o', color='red', linewidth=2, label='Naive')
-    plt.plot( n_list, jk_rmse, marker='o', color='blue', linewidth=2, label='JackKnifed')
-    #plt.ylim(top=1.5) 
+    plt.plot( n_list, mm_rmse, marker='o', color='blue', linewidth=2, label='Miller Madow')
+    plt.plot( n_list, kn_rmse, marker='o', color='magenta', linewidth=2, label='Knifed Naive')
+    plt.ylim(top=4) 
     plt.ylabel('RMSE')
     plt.xlabel('Value of n')
     plt.legend()
     plt.show()
+
